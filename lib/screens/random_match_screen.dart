@@ -86,19 +86,19 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
       desiredAccuracy: LocationAccuracy.high,
     );
 
-    // Add to matching queue
+    // Add to matching queue with more preference fields for future smart matching
     await FirebaseFirestore.instance.collection('matching_queue').add({
       'userId': FirebaseAuth.instance.currentUser!.uid,
       'latitude': position.latitude,
       'longitude': position.longitude,
       'timestamp': FieldValue.serverTimestamp(),
       'isVerified': true,
-      // TODO: Add full preferences for smart matching (interests, sex, kids status, poly etc.)
+      // TODO: Pull full user preferences (sex, interests, hasKids, wantsKids, poly etc.) from user doc for smart matching
     });
 
     await _getUserMedia();
 
-    // Still using fake delay for now (will be replaced with real signaling soon)
+    // Still using fake delay for now (Phase 3 will replace with real signaling)
     await Future.delayed(const Duration(seconds: 4));
 
     setState(() {
