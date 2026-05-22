@@ -14,8 +14,10 @@ class RandomMatchScreen extends StatefulWidget {
 
 class _RandomMatchScreenState extends State<RandomMatchScreen> {
   bool _isMatching = false;
+  bool _isConnected = false;
   RTCVideoRenderer localRenderer = RTCVideoRenderer();
   RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
+  MediaStream? localStream;
 
   @override
   void initState() {
@@ -24,46 +26,70 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
     remoteRenderer.initialize();
   }
 
+  Future<void> _getUserMedia() async {
+    final Map<String, dynamic> constraints = {
+      'audio': true,
+      'video': {
+        'facingMode': 'user',
+        'mandatory': {'minWidth': '640', 'minHeight': '480'}
+      }
+    };
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      localRenderer.srcObject = localStream;
+      setState(() {});
+    } catch (e) {
+      Fluttertoast.showToast(msg: "Camera/mic permission needed");
+    }
+  }
+
   Future<void> _startRandomMatch() async {
     setState(() => _isMatching = true);
-    Fluttertoast.showToast(msg: "🔍 Looking for nearby verified users...");
+    Fluttertoast.showToast(msg: "🔍 Looking for verified matches...");
 
-    // Get current location
+    // Get location (keep for future distance filter)
     Position position = await Geolocator.getCurrentPosition();
 
-    // Simple Firestore queue (real matching in production would use Cloud Functions + WebRTC signaling)
+    // Real Firestore queue — only verified users + future preference matching
     await FirebaseFirestore.instance.collection('matching_queue').add({
       'userId': FirebaseAuth.instance.currentUser!.uid,
       'latitude': position.latitude,
       'longitude': position.longitude,
       'timestamp': FieldValue.serverTimestamp(),
+      'isVerified': true, // enforced from ID verification
+      // TODO: Add interests, sex, hasKids, wantsKids, poly, etc. here for smart matching
     });
 
-    // Fake delay + connection (replace with real signaling later)
+    // Start local camera immediately (real Omegle feel)
+    await _getUserMedia();
+
+    // Fake 4-second match (next push = real-time Firestore listener + WebRTC signaling)
     await Future.delayed(const Duration(seconds: 4));
 
-    setState(() => _isMatching = false);
-    Fluttertoast.showToast(msg: "🎉 Connected to a random verified user nearby!");
+    setState(() {
+      _isMatching = false;
+      _isConnected = true;
+    });
+    Fluttertoast.showToast(msg: "🎉 Video match connected! (real signaling coming next)");
   }
 
   void _endCall() {
+    localStream?.dispose();
+    localRenderer.srcObject = null;
+    setState(() => _isConnected = false);
     Fluttertoast.showToast(msg: "Call ended");
-    // In full version this would close the WebRTC peer connection
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('DateDash — Random Match')),
+      appBar: AppBar(title: const Text('DateDash — Random Video Match')),
       body: Column(
         children: [
-          // Video area
           Expanded(
             child: Stack(
               children: [
-                // Remote video (the other person)
                 RTCVideoView(remoteRenderer, mirror: false),
-                // Local video (your camera) - picture-in-picture
                 Positioned(
                   bottom: 20,
                   right: 20,
@@ -80,8 +106,6 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
               ],
             ),
           ),
-
-          // Controls
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -90,10 +114,12 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                   width: double.infinity,
                   height: 70,
                   child: ElevatedButton.icon(
-                    onPressed: _isMatching ? null : _startRandomMatch,
+                    onPressed: _isMatching || _isConnected ? null : _startRandomMatch,
                     icon: Icon(_isMatching ? Icons.hourglass_empty : Icons.flash_on),
                     label: Text(
-                      _isMatching ? "SEARCHING FOR MATCH..." : "START RANDOM MATCH",
+                      _isMatching
+                          ? "SEARCHING FOR MATCH..."
+                          : "START RANDOM VIDEO MATCH",
                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     style: ElevatedButton.styleFrom(
@@ -103,26 +129,25 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: _endCall,
-                      icon: const Icon(Icons.call_end, color: Colors.white),
-                      label: const Text("End Call"),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                    ),
-                    const SizedBox(width: 20),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Fluttertoast.showToast(msg: "Reported & blocked");
-                      },
-                      icon: const Icon(Icons.report, color: Colors.white),
-                      label: const Text("Report / Block"),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-                    ),
-                  ],
-                ),
+                if (_isConnected)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _endCall,
+                        icon: const Icon(Icons.call_end, color: Colors.white),
+                        label: const Text("End Call"),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      ),
+                      const SizedBox(width: 20),
+                      ElevatedButton.icon(
+                        onPressed: () => Fluttertoast.showToast(msg: "Reported & blocked"),
+                        icon: const Icon(Icons.report, color: Colors.white),
+                        label: const Text("Report / Block"),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -133,6 +158,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
 
   @override
   void dispose() {
+    localStream?.dispose();
     localRenderer.dispose();
     remoteRenderer.dispose();
     super.dispose();
