@@ -1,0 +1,46 @@
+name: datedash
+description: DateDash - Omegle-style random video dating app with mandatory ID verification.
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+  # firebase_storage: ^12.3.3     # commented out for now to avoid build issues
+
+  # Location
+  geolocator: ^13.0.1
+  
+  # Biometrics (fingerprint/face unlock)
+  local_auth: ^2.3.0
+  
+  # State management & utils
+  provider: ^6.1.2
+  shared_preferences: ^2.3.0
+  uuid: ^4.5.0
+  
+  # UI & helpers
+  fluttertoast: ^9.1.0
+  cached_network_image: ^3.4.1
+  image_picker: ^1.1.2
+  
+  # Real-time random matching + WebRTC video chat
+  #flutter_webrtc: ^0.11.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
