@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/auth_screen.dart';
 import 'screens/id_verification_screen.dart';
-import 'screens/biometric_gate.dart';   // new
+import 'screens/biometric_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,7 +48,7 @@ class AuthWrapper extends StatelessWidget {
           return const Scaffold(body: Center(child: CircularProgressIndicator(color: Colors.pinkAccent)));
         }
         if (snapshot.hasData) {
-          return const BiometricGate();   // ← new biometric check
+          return const IDVerificationGate();   // Changed: Now goes directly to ID verification (biometric is now optional)
         }
         return const AuthScreen();
       },
