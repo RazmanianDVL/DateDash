@@ -83,75 +83,102 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('DateDash — Random Video Match')),
-      body: Column(
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                RTCVideoView(remoteRenderer, mirror: false),
-                Positioned(
-                  bottom: 20,
-                  right: 20,
-                  child: Container(
-                    width: 130,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.pinkAccent, width: 3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: RTCVideoView(localRenderer, mirror: true),
-                  ),
-                ),
-              ],
-            ),
+      appBar: AppBar(
+        title: const Text('DateDash — Random Video Match'),
+        backgroundColor: Colors.deepPurple.shade900,
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.pink.shade900,
+              Colors.deepPurple.shade900,
+              Colors.black87,
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  height: 70,
-                  child: ElevatedButton.icon(
-                    onPressed: _isMatching || _isConnected ? null : _startRandomMatch,
-                    icon: Icon(_isMatching ? Icons.hourglass_empty : Icons.flash_on),
-                    label: Text(
-                      _isMatching
-                          ? "SEARCHING FOR MATCH..."
-                          : "START RANDOM VIDEO MATCH",
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.pinkAccent,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (_isConnected)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: _endCall,
-                        icon: const Icon(Icons.call_end, color: Colors.white),
-                        label: const Text("End Call"),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      ),
-                      const SizedBox(width: 20),
-                      ElevatedButton.icon(
-                        onPressed: () => Fluttertoast.showToast(msg: "Reported & blocked"),
-                        icon: const Icon(Icons.report, color: Colors.white),
-                        label: const Text("Report / Block"),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-                      ),
-                    ],
-                  ),
-              ],
+        ),
+        child: Column(
+          children: [
+            // 18+ legal banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              color: Colors.black.withOpacity(0.7),
+              child: const Text(
+                "18+ ONLY • ID Verified • Date responsibly",
+                style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
             ),
-          ),
-        ],
+            Expanded(
+              child: Stack(
+                children: [
+                  RTCVideoView(remoteRenderer, mirror: false),
+                  Positioned(
+                    bottom: 20,
+                    right: 20,
+                    child: Container(
+                      width: 130,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.pinkAccent, width: 3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: RTCVideoView(localRenderer, mirror: true),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 70,
+                    child: ElevatedButton.icon(
+                      onPressed: _isMatching || _isConnected ? null : _startRandomMatch,
+                      icon: Icon(_isMatching ? Icons.hourglass_empty : Icons.flash_on),
+                      label: Text(
+                        _isMatching
+                            ? "SEARCHING FOR MATCH..."
+                            : "START RANDOM VIDEO MATCH",
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.pinkAccent,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (_isConnected)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _endCall,
+                          icon: const Icon(Icons.call_end, color: Colors.white),
+                          label: const Text("End Call"),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                        ),
+                        const SizedBox(width: 20),
+                        ElevatedButton.icon(
+                          onPressed: () => Fluttertoast.showToast(msg: "Reported & blocked"),
+                          icon: const Icon(Icons.report, color: Colors.white),
+                          label: const Text("Report / Block"),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
