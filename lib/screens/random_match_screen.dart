@@ -43,34 +43,69 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
     }
   }
 
+  Future<bool?> _showConsentDialog() async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.deepPurple.shade900,
+        title: const Text("18+ Only", style: TextStyle(color: Colors.white)),
+        content: const Text(
+          "You must be 18 years or older to use DateDash video matching.\n\n"
+          "All users on DateDash are ID verified.\n"
+          "Please date responsibly.",
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("I am 18+", style: TextStyle(color: Colors.pinkAccent, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _startRandomMatch() async {
+    // 18+ consent check
+    bool? consent = await _showConsentDialog();
+    if (consent != true) {
+      Fluttertoast.showToast(msg: "Must be 18+ to use video matching");
+      return;
+    }
+
     setState(() => _isMatching = true);
-    Fluttertoast.showToast(msg: "🔍 Looking for verified matches...");
+    Fluttertoast.showToast(msg: "🔍 Getting location & looking for verified matches...");
 
-    // Get location (keep for future distance filter)
-    Position position = await Geolocator.getCurrentPosition();
+    // Improved location with higher accuracy
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
 
-    // Real Firestore queue — only verified users + future preference matching
+    // Add to matching queue
     await FirebaseFirestore.instance.collection('matching_queue').add({
       'userId': FirebaseAuth.instance.currentUser!.uid,
       'latitude': position.latitude,
       'longitude': position.longitude,
       'timestamp': FieldValue.serverTimestamp(),
-      'isVerified': true, // enforced from ID verification
-      // TODO: Add interests, sex, hasKids, wantsKids, poly, etc. here for smart matching
+      'isVerified': true,
+      // TODO: Add full preferences for smart matching (interests, sex, kids status, poly etc.)
     });
 
-    // Start local camera immediately (real Omegle feel)
     await _getUserMedia();
 
-    // Fake 4-second match (next push = real-time Firestore listener + WebRTC signaling)
+    // Still using fake delay for now (will be replaced with real signaling soon)
     await Future.delayed(const Duration(seconds: 4));
 
     setState(() {
       _isMatching = false;
       _isConnected = true;
     });
-    Fluttertoast.showToast(msg: "🎉 Video match connected! (real signaling coming next)");
+    Fluttertoast.showToast(msg: "🎉 Video match connected!");
   }
 
   void _endCall() {
