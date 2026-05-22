@@ -79,7 +79,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
     }
 
     setState(() => _isMatching = true);
-    Fluttertoast.showToast(msg: "🔍 Getting location & looking for verified matches...");
+    Fluttertoast.showToast(msg: "🔍 Getting location & looking for verified matches based on your preferences...");
 
     // Improved location with higher accuracy
     Position position = await Geolocator.getCurrentPosition(
