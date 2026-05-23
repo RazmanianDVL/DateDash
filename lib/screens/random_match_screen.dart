@@ -15,9 +15,7 @@ class RandomMatchScreen extends StatefulWidget {
 }
 
 class _RandomMatchScreenState extends State<RandomMatchScreen> {
-  bool _isLoading = true;
-  bool _hasCameraPermission = false;
-  bool _hasLocationPermission = false;
+  bool _hasPermissions = false;
   bool _isMatching = false;
   bool _isConnected = false;
 
@@ -36,47 +34,36 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
     super.initState();
     localRenderer.initialize();
     remoteRenderer.initialize();
-    _checkPermissions();
+    _initialize();
   }
 
-  Future<void> _checkPermissions() async {
+  Future<void> _initialize() async {
     final camera = await Permission.camera.request();
     final mic = await Permission.microphone.request();
     final loc = await Permission.locationWhenInUse.request();
 
-    setState(() {
-      _hasCameraPermission = camera.isGranted && mic.isGranted;
-      _hasLocationPermission = loc.isGranted;
-      _isLoading = false;
-    });
+    final hasAll = camera.isGranted && mic.isGranted && loc.isGranted;
 
-    if (_hasCameraPermission) {
-      await _getUserMedia(); // ← starts live preview immediately
+    setState(() => _hasPermissions = hasAll);
+
+    if (hasAll) {
+      await _startLivePreview();
     }
   }
 
-  Future<void> _openAppSettings() async {
-    await openAppSettings();
-    _checkPermissions();
-  }
-
-  Future<void> _getUserMedia() async {
-    if (!_hasCameraPermission) return;
+  Future<void> _startLivePreview() async {
     try {
       final constraints = {'audio': true, 'video': {'facingMode': 'user'}};
       localStream = await navigator.mediaDevices.getUserMedia(constraints);
       localRenderer.srcObject = localStream;
-      setState(() {}); // force preview to show
+      setState(() {}); // force immediate preview
     } catch (e) {
       Fluttertoast.showToast(msg: "Could not access camera");
     }
   }
 
   Future<void> _startRandomMatch() async {
-    if (!_hasCameraPermission || !_hasLocationPermission) {
-      Fluttertoast.showToast(msg: "Camera and location permissions are required");
-      return;
-    }
+    if (!_hasPermissions) return;
 
     bool? consent = await _showConsentDialog();
     if (consent != true) return;
@@ -155,7 +142,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
   Widget build(BuildContext context) {
     String timerText = "${(_secondsRemaining ~/ 60).toString().padLeft(2, '0')}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}";
 
-    if (_isLoading || !_hasCameraPermission || !_hasLocationPermission) {
+    if (!_hasPermissions) {
       return Scaffold(
         appBar: AppBar(title: const Text('DateDash — Nearby Match'), backgroundColor: Colors.deepPurple.shade900),
         body: Center(
@@ -164,15 +151,11 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
             children: [
               const Icon(Icons.camera_alt, size: 80, color: Colors.white70),
               const SizedBox(height: 20),
-              const Text(
-                "Camera and location permissions are required\nfor video matching",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, color: Colors.white),
-              ),
+              const Text("Camera and location permissions required", textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: Colors.white)),
               const SizedBox(height: 30),
-              ElevatedButton(onPressed: _checkPermissions, child: const Text("Request Permissions")),
+              ElevatedButton(onPressed: _initialize, child: const Text("Request Permissions")),
               const SizedBox(height: 10),
-              TextButton(onPressed: _openAppSettings, child: const Text("Open Settings")),
+              TextButton(onPressed: () async { await openAppSettings(); _initialize(); }, child: const Text("Open Settings")),
             ],
           ),
         ),
@@ -211,8 +194,10 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                         border: Border.all(color: Colors.pinkAccent, width: 3),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      clipBehavior: Clip.hardEdge, // ← removes any gap
-                      child: RTCVideoView(localRenderer, mirror: true),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(9), // slightly smaller to fit inside border
+                        child: RTCVideoView(localRenderer, mirror: true),
+                      ),
                     ),
                   ),
                 ],
