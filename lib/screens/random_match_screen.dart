@@ -33,7 +33,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
 
   // Draggable preview
   Offset _previewPosition = Offset.zero;
-  double _previewWidth = 155.w;
+  late double _previewWidth;   // ← Fixed: no .w at class level
 
   @override
   void initState() {
@@ -41,6 +41,12 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
     localRenderer.initialize();
     remoteRenderer.initialize();
     _checkPermissionsAndInitialize();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _previewWidth = 155.w;  // Initialize responsive value after ScreenUtil is ready
   }
 
   Future<void> _checkPermissionsAndInitialize() async {
@@ -287,8 +293,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                               label: const Text("Skip"),
                               style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
                             ),
-                        ],
-                      ),
+                        ],n                      ),
                     const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
