@@ -7,6 +7,7 @@ import 'screens/auth_screen.dart';
 import 'screens/id_verification_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/biometric_gate.dart'; // kept for optional use
+import 'package:datedash/screens/main_navigation_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
