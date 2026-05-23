@@ -3,7 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_screen.dart';   // ← this import is correct now
+import 'home_screen.dart';
 
 class IDVerificationGate extends StatelessWidget {
   const IDVerificationGate({super.key});
@@ -68,46 +68,73 @@ class _IDVerificationScreenState extends State<IDVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ID Verification (Required)')),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.verified_user, size: 120, color: Colors.pinkAccent),
-            const SizedBox(height: 30),
-            const Text(
-              'Verify Your Identity',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Take a clear photo of your government ID\nthen record a live selfie',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, color: Colors.white70),
-            ),
-            const SizedBox(height: 50),
-            _isLoading
-                ? const CircularProgressIndicator(color: Colors.pinkAccent)
-                : SizedBox(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF1A0033), Color(0xFF2C0A4D), Colors.black87],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.verified_user, size: 140, color: Colors.pinkAccent),
+                const SizedBox(height: 48),
+
+                const Text(
+                  'Verify Your Identity',
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+
+                const Text(
+                  'Take a clear photo of your government ID\nthen record a live selfie',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, color: Colors.white70, height: 1.5),
+                ),
+
+                const SizedBox(height: 80),
+
+                if (_isLoading)
+                  const CircularProgressIndicator(color: Colors.pinkAccent)
+                else
+                  SizedBox(
                     width: double.infinity,
-                    height: 56,
+                    height: 66,
                     child: ElevatedButton(
                       onPressed: _verifyID,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.pinkAccent,
                         foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        elevation: 12,
                       ),
-                      child: const Text('START VERIFICATION', style: TextStyle(fontSize: 18)),
+                      child: const Text(
+                        'START VERIFICATION',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
-            const SizedBox(height: 20),
-            const Text(
-              'This is required for safety.\nYour data is encrypted and never shared.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54),
+
+                const SizedBox(height: 48),
+
+                const Text(
+                  'This is required for safety.\nYour data is encrypted and never shared.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white54, fontSize: 15, height: 1.4),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

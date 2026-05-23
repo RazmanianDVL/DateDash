@@ -1,224 +1,108 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:image_cropper/image_cropper.dart';
-import 'package:geolocator/geolocator.dart';
-import 'dart:io';
+import 'package:datedash/screens/home_screen.dart';
+import 'package:datedash/screens/random_match_screen.dart';
+import 'package:datedash/screens/profile_screen.dart';
+import 'package:datedash/screens/settings_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+class MainNavigationScreen extends StatefulWidget {
+  const MainNavigationScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  final User? user = FirebaseAuth.instance.currentUser;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-  final ImagePicker _picker = ImagePicker();
+class _MainNavigationScreenState extends State<MainNavigationScreen> {
+  int _currentIndex = 2; // Default to Match tab
 
-  List<String> photoUrls = [];
-  String? profilePicUrl;
-  String relationshipStatus = 'Single';
-  String bio = '';
-  List<String> hobbies = [];
-  Position? currentPosition;
-
-  final List<String> relationshipOptions = [
-    'Single', 'Married', 'Open Relationship', 'Divorced', 'Situationship'
+  final List<Widget> _screens = [
+    const HomeScreen(),
+    const Center(child: Text('Friends - Coming Soon', style: TextStyle(fontSize: 24, color: Colors.white))),
+    const RandomMatchScreen(),
+    const Center(child: Text('Chat - Coming Soon', style: TextStyle(fontSize: 24, color: Colors.white))),
+    const Center(child: Text('Filter - Coming Soon', style: TextStyle(fontSize: 24, color: Colors.white))),
   ];
-
-  final List<String> allHobbies = [
-    'Hiking', 'Gym', 'Travel', 'Reading', 'Gaming', 'Cooking', 'Music', 'Dancing',
-    'Movies', 'Sports', 'Photography', 'Art', 'Yoga', 'Wine tasting', 'Concerts'
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadProfile();
-    _getCurrentLocation();
-  }
-
-  Future<void> _loadProfile() async {
-    if (user == null) return;
-    final doc = await _firestore.collection('users').doc(user!.uid).get();
-    if (doc.exists) {
-      final data = doc.data()!;
-      setState(() {
-        photoUrls = List<String>.from(data['photoUrls'] ?? []);
-        profilePicUrl = data['profilePicUrl'];
-        relationshipStatus = data['relationshipStatus'] ?? 'Single';
-        bio = data['bio'] ?? '';
-        hobbies = List<String>.from(data['hobbies'] ?? []);
-      });
-    }
-  }
-
-  Future<void> _getCurrentLocation() async {
-    try {
-      final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      setState(() => currentPosition = position);
-    } catch (e) {
-      debugPrint('Location error: $e');
-    }
-  }
-
-  Future<void> _pickAndUploadPhoto() async {
-    if (photoUrls.length >= 10) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Maximum 10 photos allowed')));
-      return;
-    }
-
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image == null) return;
-
-    CroppedFile? cropped = await ImageCropper().cropImage(
-      sourcePath: image.path,
-      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-      uiSettings: [AndroidUiSettings(toolbarTitle: 'Edit Photo', toolbarColor: Colors.deepPurple, toolbarWidgetColor: Colors.white)],
-    );
-
-    if (cropped == null) return;
-
-    final ref = _storage.ref().child('profile_photos/${user!.uid}/photo_${DateTime.now().millisecondsSinceEpoch}.jpg');
-    await ref.putFile(File(cropped.path));
-    final url = await ref.getDownloadURL();
-
-    setState(() => photoUrls.add(url));
-    _saveProfile();
-  }
-
-  void _setAsProfilePic(String url) {
-    setState(() => profilePicUrl = url);
-    _saveProfile();
-  }
-
-  Future<void> _saveProfile() async {
-    if (user == null) return;
-    await _firestore.collection('users').doc(user!.uid).set({
-      'photoUrls': photoUrls,
-      'profilePicUrl': profilePicUrl,
-      'relationshipStatus': relationshipStatus,
-      'bio': bio,
-      'hobbies': hobbies,
-      'latitude': currentPosition?.latitude,
-      'longitude': currentPosition?.longitude,
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile'), backgroundColor: Colors.deepPurple.shade900),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Photo grid
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: photoUrls.length + 1,
-              itemBuilder: (context, index) {
-                if (index == photoUrls.length) {
-                  return GestureDetector(
-                    onTap: _pickAndUploadPhoto,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.pinkAccent, width: 2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Center(child: Icon(Icons.add_a_photo, size: 40, color: Colors.pinkAccent)),
-                    ),
+      appBar: AppBar(
+        title: const Text('DateDash', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.deepPurple.shade900,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.settings, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              PageRouteBuilder(
+                transitionDuration: const Duration(milliseconds: 400),
+                pageBuilder: (_, __, ___) => const SettingsScreen(),
+                transitionsBuilder: (_, animation, __, child) {
+                  return SlideTransition(
+                    position: Tween<Offset>(begin: const Offset(-1, 0), end: Offset.zero)
+                        .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+                    child: child,
                   );
-                }
-                final url = photoUrls[index];
-                return Stack(
-                  children: [
-                    GestureDetector(
-                      onTap: () => _setAsProfilePic(url),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(url, fit: BoxFit.cover),
-                      ),
-                    ),
-                    if (profilePicUrl == url)
-                      const Positioned(top: 8, right: 8, child: Icon(Icons.star, color: Colors.amber, size: 28)),
-                  ],
-                );
-              },
-            ),
-
-            const SizedBox(height: 24),
-
-            DropdownButtonFormField<String>(
-              value: relationshipStatus,
-              items: relationshipOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() => relationshipStatus = val);
-                  _saveProfile();
-                }
-              },
-              decoration: const InputDecoration(labelText: 'Relationship Status'),
-            ),
-
-            const SizedBox(height: 16),
-
-            TextField(
-              maxLength: 300,
-              maxLines: 4,
-              decoration: const InputDecoration(labelText: 'About You (bio)'),
-              onChanged: (val) => bio = val,
-              onEditingComplete: _saveProfile,
-            ),
-
-            const SizedBox(height: 24),
-
-            const Text('Hobbies', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: allHobbies.map((hobby) {
-                final selected = hobbies.contains(hobby);
-                return FilterChip(
-                  label: Text(hobby),
-                  selected: selected,
-                  onSelected: (isSelected) {
-                    setState(() {
-                      if (isSelected) {
-                        hobbies.add(hobby);
-                      } else {
-                        hobbies.remove(hobby);
-                      }
-                    });
-                    _saveProfile();
+                },
+              ),
+            );
+          },
+        ),
+        actions: [
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                PageRouteBuilder(
+                  transitionDuration: const Duration(milliseconds: 400),
+                  pageBuilder: (_, __, ___) => const ProfileScreen(),
+                  transitionsBuilder: (_, animation, __, child) {
+                    return SlideTransition(
+                      position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+                          .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+                      child: child,
+                    );
                   },
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _saveProfile,
-                child: const Text('Save Profile'),
+                ),
+              );
+            },
+            child: const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.pinkAccent,
+                child: Icon(Icons.person, color: Colors.white, size: 22),
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 350),
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(begin: const Offset(0.1, 0), end: Offset.zero).animate(animation),
+            child: child,
+          ),
         ),
+        child: _screens[_currentIndex],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        selectedItemColor: Colors.pinkAccent,
+        unselectedItemColor: Colors.white70,
+        backgroundColor: Colors.deepPurple.shade900,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Friends'),
+          BottomNavigationBarItem(icon: Icon(Icons.flash_on), label: 'Match'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
+          BottomNavigationBarItem(icon: Icon(Icons.filter_list), label: 'Filter'),
+        ],
       ),
     );
   }

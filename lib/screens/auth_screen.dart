@@ -11,6 +11,8 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool isLogin = true;
+  bool _isLoading = false;
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -27,6 +29,8 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _handleAuth() async {
+    setState(() => _isLoading = true);
+
     try {
       if (isLogin) {
         await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -48,95 +52,132 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } on FirebaseAuthException catch (e) {
       Fluttertoast.showToast(msg: e.message ?? "Authentication failed");
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'DateDash',
-              style: TextStyle(fontSize: 42, fontWeight: FontWeight.bold, color: Colors.pinkAccent),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              isLogin ? 'Sign in to start random matching' : 'Create account (18+)',
-              style: const TextStyle(fontSize: 18, color: Colors.white70),
-            ),
-            const SizedBox(height: 40),
-
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.email),
-              ),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 16),
-
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock),
-              ),
-              obscureText: true,
-            ),
-            const SizedBox(height: 16),
-
-            if (!isLogin)
-              TextField(
-                controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone number (optional)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.phone),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF1A0033), Color(0xFF2C0A4D), Colors.black87],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                const SizedBox(height: 40),
+                const Text(
+                  'DateDash',
+                  style: TextStyle(
+                    fontSize: 52,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.pinkAccent,
+                    letterSpacing: -1,
+                  ),
                 ),
-                keyboardType: TextInputType.phone,
-              ),
-            const SizedBox(height: 30),
-
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _handleAuth,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.pinkAccent,
-                  foregroundColor: Colors.white,
+                const SizedBox(height: 8),
+                Text(
+                  isLogin ? 'Welcome back' : 'Create your account (18+)',
+                  style: const TextStyle(fontSize: 22, color: Colors.white70),
                 ),
-                child: Text(
-                  isLogin ? 'LOGIN' : 'CREATE ACCOUNT',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+
+                const SizedBox(height: 60),
+
+                Card(
+                  elevation: 12,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                  color: Colors.white.withOpacity(0.1),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: _emailController,
+                          decoration: InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: const Icon(Icons.email, color: Colors.pinkAccent),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.08),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _passwordController,
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            prefixIcon: const Icon(Icons.lock, color: Colors.pinkAccent),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.08),
+                          ),
+                          obscureText: true,
+                        ),
+                        const SizedBox(height: 16),
+                        if (!isLogin)
+                          TextField(
+                            controller: _phoneController,
+                            decoration: InputDecoration(
+                              labelText: 'Phone number (optional)',
+                              prefixIcon: const Icon(Icons.phone, color: Colors.pinkAccent),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                              filled: true,
+                              fillColor: Colors.white.withOpacity(0.08),
+                            ),
+                            keyboardType: TextInputType.phone,
+                          ),
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 58,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _handleAuth,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.pinkAccent,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              elevation: 8,
+                            ),
+                            child: _isLoading
+                                ? const CircularProgressIndicator(color: Colors.white)
+                                : Text(
+                                    isLogin ? 'LOGIN' : 'CREATE ACCOUNT',
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
 
-            const SizedBox(height: 16),
+                const SizedBox(height: 24),
+                TextButton(
+                  onPressed: () => setState(() => isLogin = !isLogin),
+                  child: Text(
+                    isLogin ? "Don't have an account? Sign up" : "Already have an account? Login",
+                    style: const TextStyle(color: Colors.pinkAccent, fontSize: 16),
+                  ),
+                ),
 
-            TextButton(
-              onPressed: () => setState(() => isLogin = !isLogin),
-              child: Text(
-                isLogin ? "Don't have an account? Sign up" : "Already have an account? Login",
-                style: const TextStyle(color: Colors.pinkAccent),
-              ),
+                const SizedBox(height: 40),
+                const Text(
+                  'Fingerprint / Face ID unlock\nwill be enabled after first login',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white54, fontSize: 14),
+                ),
+              ],
             ),
-
-            const SizedBox(height: 30),
-            const Text(
-              'Fingerprint / Face ID unlock\nwill be enabled after first login',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54, fontSize: 14),
-            ),
-          ],
+          ),
         ),
       ),
     );
