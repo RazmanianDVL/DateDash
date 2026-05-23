@@ -6,7 +6,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
-import 'dart:math' as math;
 
 class RandomMatchScreen extends StatefulWidget {
   const RandomMatchScreen({super.key});
@@ -16,10 +15,11 @@ class RandomMatchScreen extends StatefulWidget {
 }
 
 class _RandomMatchScreenState extends State<RandomMatchScreen> {
-  bool _isMatching = false;
-  bool _isConnected = false;
+  bool _isLoading = true;
   bool _hasCameraPermission = false;
   bool _hasLocationPermission = false;
+  bool _isMatching = false;
+  bool _isConnected = false;
 
   RTCVideoRenderer localRenderer = RTCVideoRenderer();
   RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
@@ -36,41 +36,39 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
     super.initState();
     localRenderer.initialize();
     remoteRenderer.initialize();
-    _checkAllPermissions();
+    _checkPermissions();
   }
 
-  Future<void> _checkAllPermissions() async {
-    // Camera + Mic
-    final cameraStatus = await Permission.camera.request();
-    final micStatus = await Permission.microphone.request();
-    setState(() => _hasCameraPermission = cameraStatus.isGranted && micStatus.isGranted);
+  Future<void> _checkPermissions() async {
+    final camera = await Permission.camera.request();
+    final mic = await Permission.microphone.request();
+    final loc = await Permission.locationWhenInUse.request();
 
-    // Location
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      await Geolocator.openLocationSettings();
+    setState(() {
+      _hasCameraPermission = camera.isGranted && mic.isGranted;
+      _hasLocationPermission = loc.isGranted;
+      _isLoading = false;
+    });
+
+    if (_hasCameraPermission) {
+      await _getUserMedia(); // ← starts live preview immediately
     }
-    LocationPermission locPerm = await Geolocator.checkPermission();
-    if (locPerm == LocationPermission.denied) {
-      locPerm = await Geolocator.requestPermission();
-    }
-    setState(() => _hasLocationPermission = locPerm == LocationPermission.whileInUse || locPerm == LocationPermission.always);
   }
 
   Future<void> _openAppSettings() async {
     await openAppSettings();
+    _checkPermissions();
   }
 
   Future<void> _getUserMedia() async {
     if (!_hasCameraPermission) return;
-
     try {
       final constraints = {'audio': true, 'video': {'facingMode': 'user'}};
       localStream = await navigator.mediaDevices.getUserMedia(constraints);
       localRenderer.srcObject = localStream;
-      setState(() {});
+      setState(() {}); // force preview to show
     } catch (e) {
-      Fluttertoast.showToast(msg: "Failed to access camera");
+      Fluttertoast.showToast(msg: "Could not access camera");
     }
   }
 
@@ -95,8 +93,6 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
       'timestamp': FieldValue.serverTimestamp(),
       'isVerified': true,
     });
-
-    await _getUserMedia();
 
     _currentRoomId = 'room-${DateTime.now().millisecondsSinceEpoch}';
     _peerConnection = await createPeerConnection({'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]});
@@ -159,38 +155,24 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
   Widget build(BuildContext context) {
     String timerText = "${(_secondsRemaining ~/ 60).toString().padLeft(2, '0')}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}";
 
-    if (!_hasCameraPermission) {
+    if (_isLoading || !_hasCameraPermission || !_hasLocationPermission) {
       return Scaffold(
         appBar: AppBar(title: const Text('DateDash — Nearby Match'), backgroundColor: Colors.deepPurple.shade900),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text("Camera permission required for video matching", style: TextStyle(fontSize: 18, color: Colors.white)),
+              const Icon(Icons.camera_alt, size: 80, color: Colors.white70),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _openAppSettings,
-                child: const Text("Enable Camera Permissions"),
+              const Text(
+                "Camera and location permissions are required\nfor video matching",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, color: Colors.white),
               ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (!_hasLocationPermission) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('DateDash — Nearby Match'), backgroundColor: Colors.deepPurple.shade900),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text("Location permission required for nearby matching", style: TextStyle(fontSize: 18, color: Colors.white)),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _openAppSettings,
-                child: const Text("Enable Location Permissions"),
-              ),
+              const SizedBox(height: 30),
+              ElevatedButton(onPressed: _checkPermissions, child: const Text("Request Permissions")),
+              const SizedBox(height: 10),
+              TextButton(onPressed: _openAppSettings, child: const Text("Open Settings")),
             ],
           ),
         ),
@@ -229,6 +211,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                         border: Border.all(color: Colors.pinkAccent, width: 3),
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      clipBehavior: Clip.hardEdge, // ← removes any gap
                       child: RTCVideoView(localRenderer, mirror: true),
                     ),
                   ),

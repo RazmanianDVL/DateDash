@@ -13,33 +13,30 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _isLoading = true;
   bool _hasLocationPermission = false;
-  String? _userCity;
-  String? _userState;
+  String? _userCity = "Tulsa";
+  String? _userState = "OK";
 
   @override
   void initState() {
     super.initState();
-    _checkLocationPermissionAndLoadNearby();
+    _checkPermissions();
   }
 
-  Future<void> _checkLocationPermissionAndLoadNearby() async {
+  Future<void> _checkPermissions() async {
     final status = await Permission.locationWhenInUse.request();
-    setState(() => _hasLocationPermission = status.isGranted);
-
-    if (!status.isGranted) {
-      Fluttertoast.showToast(msg: "Location permission needed to see nearby users");
-      return;
-    }
-
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-
-    // For now we use Tulsa/OK for testing — later we'll add real reverse geocoding
     setState(() {
-      _userCity = "Tulsa";
-      _userState = "OK";
+      _hasLocationPermission = status.isGranted;
+      _isLoading = false;
     });
 
+    if (status.isGranted) {
+      await _saveUserLocation();
+    }
+  }
+
+  Future<void> _saveUserLocation() async {
     await FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser!.uid).update({
       'city': _userCity,
       'state': _userState,
@@ -48,8 +45,38 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _showProfileModal(Map<String, dynamic> user) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.deepPurple.shade900,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(radius: 50, backgroundImage: user['photoUrl'] != null ? NetworkImage(user['photoUrl']) : null, child: user['photoUrl'] == null ? const Icon(Icons.person, size: 50) : null),
+            const SizedBox(height: 10),
+            Text(user['displayName'] ?? "Anonymous User", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text("${user['city'] ?? 'Unknown'}, ${user['state'] ?? 'Unknown'}", style: const TextStyle(color: Colors.white70)),
+            const SizedBox(height: 20),
+            ElevatedButton(onPressed: () => Fluttertoast.showToast(msg: "Connect request sent!"), child: const Text("Send Connect Request")),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Nearby Users'), backgroundColor: Colors.deepPurple.shade900),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     if (!_hasLocationPermission) {
       return Scaffold(
         appBar: AppBar(title: const Text('Nearby Users'), backgroundColor: Colors.deepPurple.shade900),
@@ -57,15 +84,13 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text("Location permission required to see nearby users", style: TextStyle(fontSize: 18, color: Colors.white)),
+              const Icon(Icons.location_off, size: 80, color: Colors.white70),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  await openAppSettings();
-                  _checkLocationPermissionAndLoadNearby();
-                },
-                child: const Text("Enable Location Permissions"),
-              ),
+              const Text("Location permission required\nto see nearby users", textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: Colors.white)),
+              const SizedBox(height: 30),
+              ElevatedButton(onPressed: _checkPermissions, child: const Text("Request Location Permission")),
+              const SizedBox(height: 10),
+              TextButton(onPressed: () async { await openAppSettings(); _checkPermissions(); }, child: const Text("Open Settings")),
             ],
           ),
         ),
@@ -75,11 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Nearby Users'), backgroundColor: Colors.deepPurple.shade900),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .where('isVerified', isEqualTo: true)
-            .where('isOnline', isEqualTo: true)
-            .snapshots(),
+        stream: FirebaseFirestore.instance.collection('users').where('isVerified', isEqualTo: true).where('isOnline', isEqualTo: true).snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
@@ -89,7 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }).toList();
 
           if (users.isEmpty) {
-            return const Center(child: Text("No one nearby right now\n(people with app open in your city/state)", style: TextStyle(color: Colors.white70)));
+            return const Center(child: Text("No one nearby right now\n(people with app open in your city/state)", textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)));
           }
 
           return ListView.builder(
@@ -97,13 +118,14 @@ class _HomeScreenState extends State<HomeScreen> {
             itemBuilder: (context, index) {
               final user = users[index].data() as Map<String, dynamic>;
               return ListTile(
-                leading: CircleAvatar(backgroundColor: Colors.pinkAccent, child: const Icon(Icons.person, color: Colors.white)),
+                leading: CircleAvatar(
+                  backgroundImage: user['photoUrl'] != null ? NetworkImage(user['photoUrl']) : null,
+                  child: user['photoUrl'] == null ? const Icon(Icons.person) : null,
+                ),
                 title: Text(user['displayName'] ?? "Anonymous User", style: const TextStyle(color: Colors.white)),
                 subtitle: Text("${user['city'] ?? 'Unknown'}, ${user['state'] ?? 'Unknown'}", style: const TextStyle(color: Colors.white70)),
-                trailing: ElevatedButton(
-                  onPressed: () => Fluttertoast.showToast(msg: "Connect request sent!"),
-                  child: const Text("Connect"),
-                ),
+                onTap: () => _showProfileModal(user),
+                trailing: ElevatedButton(onPressed: () => Fluttertoast.showToast(msg: "Connect request sent!"), child: const Text("Connect")),
               );
             },
           );
