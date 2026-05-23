@@ -80,7 +80,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
       localStream = await navigator.mediaDevices.getUserMedia(constraints);
       localRenderer.srcObject = localStream;
 
-      // Dynamically update aspect ratio from actual camera dimensions (fixed for flutter_webrtc)
+      // Dynamically update aspect ratio from actual camera dimensions
       localRenderer.onResize = (int width, int height) {
         if (width > 0 && height > 0) {
           setState(() {
@@ -173,11 +173,17 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final previewWidth = (size.width * 0.38).clamp(130.0, 180.0);
     String timerText = "${(_secondsRemaining ~/ 60).toString().padLeft(2, '0')}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}";
 
     if (_isInitialized && !_hasPermissions) {
       return Scaffold(
-        appBar: AppBar(title: const Text('DateDash — Nearby Match'), backgroundColor: Colors.deepPurple.shade900),
+        appBar: AppBar(
+          title: const SizedBox(), // Removed header
+          backgroundColor: Colors.deepPurple.shade900,
+          elevation: 0,
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -202,9 +208,13 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
       );
     }
 
-    // Main Nearby Match UI
+    // Main Nearby Match UI - Fully responsive
     return Scaffold(
-      appBar: AppBar(title: const Text('DateDash — Nearby Match'), backgroundColor: Colors.deepPurple.shade900),
+      appBar: AppBar(
+        title: const SizedBox(), // Removed header for more space
+        backgroundColor: Colors.deepPurple.shade900,
+        elevation: 0,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -226,10 +236,10 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                 children: [
                   RTCVideoView(remoteRenderer, mirror: false),
                   Positioned(
-                    bottom: 30,
-                    right: 20,
+                    bottom: size.height * 0.08,
+                    right: size.width * 0.05,
                     child: SizedBox(
-                      width: 155,
+                      width: previewWidth,
                       child: AspectRatio(
                         aspectRatio: _previewAspectRatio,
                         child: Container(
@@ -247,7 +257,11 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                           clipBehavior: Clip.hardEdge,
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(18),
-                            child: RTCVideoView(localRenderer, mirror: true),
+                            child: RTCVideoView(
+                              localRenderer,
+                              mirror: true,
+                              objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover, // Fills the frame perfectly - no gaps
+                            ),
                           ),
                         ),
                       ),
@@ -257,7 +271,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(size.width * 0.05),
               child: Column(
                 children: [
                   if (_isConnected)
@@ -273,7 +287,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                   const SizedBox(height: 10),
                   SizedBox(
                     width: double.infinity,
-                    height: 70,
+                    height: size.height * 0.08,
                     child: ElevatedButton.icon(
                       onPressed: _isMatching || _isConnected ? null : _startRandomMatch,
                       icon: Icon(_isMatching ? Icons.hourglass_empty : Icons.flash_on),
@@ -282,13 +296,16 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                     ),
                   ),
                   if (_isConnected)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton.icon(onPressed: _endCall, icon: const Icon(Icons.call_end), label: const Text("End"), style: ElevatedButton.styleFrom(backgroundColor: Colors.red)),
-                        const SizedBox(width: 20),
-                        ElevatedButton.icon(onPressed: () => Fluttertoast.showToast(msg: "Reported"), icon: const Icon(Icons.report), label: const Text("Report")),
-                      ],
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ElevatedButton.icon(onPressed: _endCall, icon: const Icon(Icons.call_end), label: const Text("End"), style: ElevatedButton.styleFrom(backgroundColor: Colors.red)),
+                          const SizedBox(width: 20),
+                          ElevatedButton.icon(onPressed: () => Fluttertoast.showToast(msg: "Reported"), icon: const Icon(Icons.report), label: const Text("Report")),
+                        ],
+                      ),
                     ),
                 ],
               ),
