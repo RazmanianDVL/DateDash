@@ -6,8 +6,8 @@ import 'firebase_options.dart';
 import 'screens/auth_screen.dart';
 import 'screens/id_verification_screen.dart';
 import 'screens/main_navigation_screen.dart';
-import 'screens/biometric_gate.dart'; // kept for optional use
-import 'package:datedash/screens/main_navigation_screen.dart';
+import 'screens/biometric_gate.dart';
+import 'core/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,12 +23,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'DateDash',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.pink,
-        scaffoldBackgroundColor: Colors.black,
-        appBarTheme: const AppBarTheme(backgroundColor: Colors.deepPurple),
-        textTheme: const TextTheme(bodyMedium: TextStyle(color: Colors.white)),
-      ),
+      theme: dateDashTheme,
       home: const AuthWrapper(),
     );
   }
@@ -48,10 +43,9 @@ class AuthWrapper extends StatelessWidget {
 
         final user = snapshot.data;
         if (user == null) {
-          return const AuthScreen(); // your existing login/signup screen
+          return const AuthScreen();
         }
 
-        // User is logged in → check if they have completed ID verification
         return FutureBuilder<DocumentSnapshot>(
           future: FirebaseFirestore.instance
               .collection('users')
@@ -64,20 +58,16 @@ class AuthWrapper extends StatelessWidget {
 
             final userData = userSnapshot.data?.data() as Map<String, dynamic>? ?? {};
 
-            // Biometric is now OPTIONAL (we already added this flag earlier)
             final bool biometricEnabled = userData['biometricEnabled'] ?? false;
 
-            // If they have NOT completed ID verification yet
             if (userData['isVerified'] != true) {
               return const IDVerificationScreen();
             }
 
-            // Biometric optional check (only show if they turned it on)
             if (biometricEnabled) {
-              return const BiometricGate(); // your existing biometric screen
+              return const BiometricGate();
             }
 
-            // Everything is done → go to the new bottom-nav home
             return MainNavigationScreen();
           },
         );
