@@ -80,8 +80,8 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
       localStream = await navigator.mediaDevices.getUserMedia(constraints);
       localRenderer.srcObject = localStream;
 
-      // Dynamically update aspect ratio from actual camera dimensions
-      localRenderer.onVideoSizeChanged = (int width, int height) {
+      // Dynamically update aspect ratio from actual camera dimensions (fixed for flutter_webrtc)
+      localRenderer.onResize = (int width, int height) {
         if (width > 0 && height > 0) {
           setState(() {
             _previewAspectRatio = width / height;
