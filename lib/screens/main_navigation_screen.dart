@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'home_screen.dart';           // ← THIS WAS MISSING
-import 'random_match_screen.dart';
+import 'package:datedash/screens/home_screen.dart';
+import 'package:datedash/screens/friends_screen.dart';
+import 'package:datedash/screens/random_match_screen.dart';
+import 'package:datedash/screens/chat_screen.dart';
+import 'package:datedash/screens/filter_screen.dart';
+import 'package:datedash/screens/profile_screen.dart';   // ← Added for Profile
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -11,51 +14,15 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 0; // default to Home (Nearby) tab
+  int _currentIndex = 2; // Default to Match tab (Nearby Match)
 
   final List<Widget> _screens = [
-    const HomeScreen(),                    // ← Home = Nearby Users screen
-    const Center(child: Text('Friends Screen - Coming Soon', style: TextStyle(fontSize: 24))),
-    const RandomMatchScreen(),             // ← Match tab (video call)
-    const Center(child: Text('Chat Screen - Coming Soon', style: TextStyle(fontSize: 24))),
-    const Center(child: Text('Filter Screen (Premium) - Coming Soon', style: TextStyle(fontSize: 24))),
+    const HomeScreen(),
+    const FriendsScreen(),
+    const RandomMatchScreen(),
+    const ChatScreen(),
+    const FilterScreen(),
   ];
-
-  void _showProfileDrawer() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.75,
-        decoration: const BoxDecoration(
-          color: Colors.deepPurple,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            const CircleAvatar(radius: 40, backgroundColor: Colors.pinkAccent),
-            const SizedBox(height: 10),
-            const Text("Your Name", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-            const Text("Verified User", style: TextStyle(color: Colors.white70)),
-            const Divider(color: Colors.white24, height: 30),
-            ListTile(leading: const Icon(Icons.settings, color: Colors.white), title: const Text("Settings", style: TextStyle(color: Colors.white)), onTap: () {}),
-            const Spacer(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.redAccent),
-              title: const Text("Logout", style: TextStyle(color: Colors.redAccent)),
-              onTap: () async {
-                await FirebaseAuth.instance.signOut();
-                if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
-              },
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,10 +32,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         backgroundColor: Colors.deepPurple.shade900,
         actions: [
           GestureDetector(
-            onTap: _showProfileDrawer,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
             child: const Padding(
               padding: EdgeInsets.only(right: 16),
-              child: CircleAvatar(radius: 18, backgroundColor: Colors.pinkAccent, child: Icon(Icons.person, color: Colors.white, size: 22)),
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.pinkAccent,
+                child: Icon(Icons.person, color: Colors.white, size: 22),
+              ),
             ),
           ),
         ],
@@ -76,11 +52,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed,
+        onTap: (index) {
+          setState(() => _currentIndex = index);
+        },
         selectedItemColor: Colors.pinkAccent,
         unselectedItemColor: Colors.white70,
         backgroundColor: Colors.deepPurple.shade900,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Friends'),
