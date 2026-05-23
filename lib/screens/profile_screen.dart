@@ -5,7 +5,6 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
@@ -60,32 +59,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _getCurrentLocation() async {
-    final position = await Geolocator.getCurrentPosition();
-    setState(() => currentPosition = position);
+    try {
+      final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      setState(() => currentPosition = position);
+    } catch (e) {
+      debugPrint('Location error: $e');
+    }
   }
 
   Future<void> _pickAndUploadPhoto() async {
-    if (photoUrls.length >= 10) return;
+    if (photoUrls.length >= 10) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Maximum 10 photos allowed')));
+      return;
+    }
+
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
 
-    // Crop/zoom editor
     CroppedFile? cropped = await ImageCropper().cropImage(
       sourcePath: image.path,
       aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-      uiSettings: [AndroidUiSettings(toolbarTitle: 'Edit Photo')],
+      uiSettings: [AndroidUiSettings(toolbarTitle: 'Edit Photo', toolbarColor: Colors.deepPurple, toolbarWidgetColor: Colors.white)],
     );
 
     if (cropped == null) return;
 
-    // Upload to Firebase Storage
     final ref = _storage.ref().child('profile_photos/${user!.uid}/photo_${DateTime.now().millisecondsSinceEpoch}.jpg');
     await ref.putFile(File(cropped.path));
     final url = await ref.getDownloadURL();
 
-    setState(() {
-      photoUrls.add(url);
-    });
+    setState(() => photoUrls.add(url));
     _saveProfile();
   }
 
@@ -113,17 +116,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Profile'), backgroundColor: Colors.deepPurple.shade900),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.w),
+        padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Photo grid (up to 10)
+            // Photo grid
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
               ),
               itemCount: photoUrls.length + 1,
               itemBuilder: (context, index) {
@@ -131,7 +135,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   return GestureDetector(
                     onTap: _pickAndUploadPhoto,
                     child: Container(
-                      decoration: BoxDecoration(border: Border.all(color: Colors.pinkAccent), borderRadius: BorderRadius.circular(12.r)),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.pinkAccent, width: 2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: const Center(child: Icon(Icons.add_a_photo, size: 40, color: Colors.pinkAccent)),
                     ),
                   );
@@ -142,12 +149,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     GestureDetector(
                       onTap: () => _setAsProfilePic(url),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12.r),
+                        borderRadius: BorderRadius.circular(12),
                         child: Image.network(url, fit: BoxFit.cover),
                       ),
                     ),
                     if (profilePicUrl == url)
-                      const Positioned(top: 8, right: 8, child: Icon(Icons.star, color: Colors.amber)),
+                      const Positioned(top: 8, right: 8, child: Icon(Icons.star, color: Colors.amber, size: 28)),
                   ],
                 );
               },
@@ -155,20 +162,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 24),
 
-            // Relationship Status
             DropdownButtonFormField<String>(
               value: relationshipStatus,
               items: relationshipOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
               onChanged: (val) {
-                setState(() => relationshipStatus = val!);
-                _saveProfile();
+                if (val != null) {
+                  setState(() => relationshipStatus = val);
+                  _saveProfile();
+                }
               },
               decoration: const InputDecoration(labelText: 'Relationship Status'),
             ),
 
             const SizedBox(height: 16),
 
-            // Bio
             TextField(
               maxLength: 300,
               maxLines: 4,
@@ -179,10 +186,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 24),
 
-            // Hobbies
             const Text('Hobbies', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Wrap(
-              spacing: 8.w,
+              spacing: 8,
+              runSpacing: 8,
               children: allHobbies.map((hobby) {
                 final selected = hobbies.contains(hobby);
                 return FilterChip(
@@ -190,8 +197,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   selected: selected,
                   onSelected: (isSelected) {
                     setState(() {
-                      if (isSelected) hobbies.add(hobby);
-                      else hobbies.remove(hobby);
+                      if (isSelected) {
+                        hobbies.add(hobby);
+                      } else {
+                        hobbies.remove(hobby);
+                      }
                     });
                     _saveProfile();
                   },
@@ -200,9 +210,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
 
             const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: _saveProfile,
-              child: const Text('Save Profile'),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _saveProfile,
+                child: const Text('Save Profile'),
+              ),
             ),
           ],
         ),
