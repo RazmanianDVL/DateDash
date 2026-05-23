@@ -31,9 +31,8 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
   int _secondsRemaining = 300;
   bool _showSkipButton = false;
 
-  // Draggable preview
+  // Draggable preview - all sizing happens inside build()
   Offset _previewPosition = Offset.zero;
-  late double _previewWidth;
 
   @override
   void initState() {
@@ -41,12 +40,6 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
     localRenderer.initialize();
     remoteRenderer.initialize();
     _checkPermissionsAndInitialize();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _previewWidth = 155.w;
   }
 
   Future<void> _checkPermissionsAndInitialize() async {
@@ -169,13 +162,16 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    String timerText = "${(_secondsRemaining ~/ 60).toString().padLeft(2, '0')}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}";
+    final screenWidth = MediaQuery.of(context).size.width;
+    final previewWidth = screenWidth * 0.38; // responsive ~38% of screen
 
-    // Default draggable position (bottom-right)
+    // Default position (bottom-right)
     if (_previewPosition == Offset.zero) {
       final size = MediaQuery.of(context).size;
-      _previewPosition = Offset(size.width - _previewWidth - 20.w, size.height * 0.55);
+      _previewPosition = Offset(size.width - previewWidth - 20, size.height * 0.55);
     }
+
+    String timerText = "${(_secondsRemaining ~/ 60).toString().padLeft(2, '0')}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}";
 
     if (_isInitialized && !_hasPermissions) {
       return Scaffold(
@@ -217,7 +213,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                 left: 0,
                 right: 0,
                 child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 8.h),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   color: Colors.black.withOpacity(0.7),
                   child: const Center(
                     child: Text(
@@ -231,7 +227,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
               // Full-screen remote video
               RTCVideoView(remoteRenderer, mirror: false),
 
-              // Draggable local camera preview with perfect pink border
+              // Draggable local preview - perfect pink border
               Positioned(
                 left: _previewPosition.dx,
                 top: _previewPosition.dy,
@@ -241,26 +237,26 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                       final size = MediaQuery.of(context).size;
                       _previewPosition += details.delta;
                       _previewPosition = Offset(
-                        _previewPosition.dx.clamp(10.w, size.width - _previewWidth - 10.w),
-                        _previewPosition.dy.clamp(60.h, size.height - 250.h),
+                        _previewPosition.dx.clamp(10.0, size.width - previewWidth - 10),
+                        _previewPosition.dy.clamp(60.0, size.height - 250.0),
                       );
                     });
                   },
                   child: SizedBox(
-                    width: _previewWidth,
+                    width: previewWidth,
                     child: AspectRatio(
                       aspectRatio: 9 / 16,
                       child: Container(
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.pinkAccent, width: 6.w),
-                          borderRadius: BorderRadius.circular(18.r),
+                          border: Border.all(color: Colors.pinkAccent, width: 6),
+                          borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(color: Colors.pinkAccent.withOpacity(0.6), blurRadius: 20, spreadRadius: 3),
                           ],
                         ),
                         clipBehavior: Clip.hardEdge,
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(18.r),
+                          borderRadius: BorderRadius.circular(18),
                           child: RTCVideoView(
                             localRenderer,
                             mirror: true,
@@ -275,9 +271,9 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
 
               // Bottom controls
               Positioned(
-                bottom: 20.h,
-                left: 20.w,
-                right: 20.w,
+                bottom: 20,
+                left: 20,
+                right: 20,
                 child: Column(
                   children: [
                     if (_isConnected)
@@ -298,7 +294,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                     const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
-                      height: 70.h,
+                      height: 70,
                       child: ElevatedButton.icon(
                         onPressed: _isMatching || _isConnected ? null : _startRandomMatch,
                         icon: Icon(_isMatching ? Icons.hourglass_empty : Icons.flash_on),
