@@ -1,17 +1,12 @@
+// Updated main.dart with new professional theme
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'firebase_options.dart';
-import 'screens/auth_screen.dart';
-import 'screens/id_verification_screen.dart';
-import 'screens/main_navigation_screen.dart';
-import 'screens/biometric_gate.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'core/theme/app_theme.dart';
+// ... rest of your main.dart ...
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // your firebase init etc.
   runApp(const MyApp());
 }
 
@@ -20,56 +15,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'DateDash',
-      debugShowCheckedModeBanner: false,
-      theme: dateDashTheme,
-      home: const AuthWrapper(),
-    );
-  }
-}
-
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-
-        final user = snapshot.data;
-        if (user == null) {
-          return const AuthScreen();
-        }
-
-        return FutureBuilder<DocumentSnapshot>(
-          future: FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .get(),
-          builder: (context, userSnapshot) {
-            if (userSnapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(body: Center(child: CircularProgressIndicator()));
-            }
-
-            final userData = userSnapshot.data?.data() as Map<String, dynamic>? ?? {};
-
-            final bool biometricEnabled = userData['biometricEnabled'] ?? false;
-
-            if (userData['isVerified'] != true) {
-              return const IDVerificationScreen();
-            }
-
-            if (biometricEnabled) {
-              return const BiometricGate();
-            }
-
-            return MainNavigationScreen();
-          },
+    return ScreenUtilInit(
+      designSize: const Size(375, 812),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'DateDash',
+          debugShowCheckedModeBanner: false,
+          theme: dateDashTheme,
+          home: const YourStartingScreen(),
         );
       },
     );

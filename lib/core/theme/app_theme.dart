@@ -5,8 +5,8 @@ ThemeData get dateDashTheme => ThemeData(
   useMaterial3: true,
   brightness: Brightness.dark,
   colorScheme: ColorScheme.dark(
-    primary: const Color(0xFFFD2D6C), // Professional Tinder-inspired vibrant pink-red
-    secondary: const Color(0xFF14E0C8), // Elegant toned teal accent
+    primary: const Color(0xFFFD2D6C),     // Rich professional pink (Tinder-inspired)
+    secondary: const Color(0xFF14E0C8),   // Elegant teal accent
     surface: const Color(0xFF1C1C2E),
     background: const Color(0xFF0F0F1A),
     onPrimary: Colors.white,
@@ -16,30 +16,27 @@ ThemeData get dateDashTheme => ThemeData(
   scaffoldBackgroundColor: const Color(0xFF0F0F1A),
   appBarTheme: const AppBarTheme(
     backgroundColor: Color(0xFF0F0F1A),
-    foregroundColor: Colors.white,
     elevation: 0,
     centerTitle: true,
+    titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
   ),
   cardTheme: CardTheme(
     color: const Color(0xFF1C1C2E),
-    elevation: 6,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    elevation: 4,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
   ),
   textTheme: GoogleFonts.interTextTheme(
-    ThemeData.dark().textTheme.copyWith(
-      displayLarge: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: -1),
-      titleLarge: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-      bodyLarge: const TextStyle(fontSize: 16, color: Colors.white70),
-    ),
+    ThemeData.dark().textTheme,
+  ).copyWith(
+    bodyLarge: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
   ),
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
       backgroundColor: const Color(0xFFFD2D6C),
       foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-      padding: const EdgeInsets.symmetric(vertical: 18),
       elevation: 6,
-      shadowColor: const Color(0xFFFD2D6C).withOpacity(0.4),
     ),
   ),
   inputDecorationTheme: InputDecorationTheme(
@@ -49,11 +46,9 @@ ThemeData get dateDashTheme => ThemeData(
       borderRadius: BorderRadius.circular(16),
       borderSide: BorderSide.none,
     ),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-  ),
-  chipTheme: ChipThemeData(
-    backgroundColor: const Color(0xFF1C1C2E),
-    selectedColor: const Color(0xFFFD2D6C),
-    labelStyle: const TextStyle(color: Colors.white),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: Color(0xFFFD2D6C), width: 2),
+    ),
   ),
 );
