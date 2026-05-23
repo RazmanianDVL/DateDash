@@ -77,7 +77,7 @@ class AuthWrapper extends StatelessWidget {
             }
 
             // Everything is done → go to the new bottom-nav home
-            return const MainNavigationScreen();
+            return MainNavigationScreen();
           },
         );
       },
