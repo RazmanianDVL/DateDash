@@ -36,6 +36,9 @@ dependencies:
   # 🔥 VIDEO MATCHING — now enabled
   flutter_webrtc: ^1.4.1
 
+  # Responsive UI for all devices & iOS (project-wide dynamic sizing)
+  flutter_screenutil: ^5.9.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
