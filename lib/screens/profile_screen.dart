@@ -139,11 +139,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               // Large profile picture
               CircleAvatar(
-                radius: 75,
+                radius: 80,
                 backgroundColor: Colors.grey[800],
                 backgroundImage: profilePicUrl != null ? NetworkImage(profilePicUrl!) : null,
                 child: profilePicUrl == null
-                    ? const Icon(Icons.person, size: 100, color: Colors.white70)
+                    ? const Icon(Icons.person, size: 110, color: Colors.white70)
                     : null,
               ),
               const SizedBox(height: 32),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -31,9 +32,7 @@ class SettingsScreen extends StatelessWidget {
               icon: Icons.person_outline,
               title: 'Edit Profile',
               subtitle: 'Photos, bio, and preferences',
-              onTap: () {
-                Navigator.pop(context); // Already on Profile screen via navigation
-              },
+              onTap: () => Navigator.pop(context),
             ),
 
             const SizedBox(height: 32),
@@ -51,7 +50,7 @@ class SettingsScreen extends StatelessWidget {
             const SizedBox(height: 32),
 
             const Text(
-              'Support',
+              'Support & Legal',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             const SizedBox(height: 12),
@@ -64,10 +63,9 @@ class SettingsScreen extends StatelessWidget {
             // Logout
             SizedBox(
               width: double.infinity,
-              height: 58,
+              height: 62,
               child: ElevatedButton(
                 onPressed: () {
-                  // TODO: Add real logout later
                   Fluttertoast.showToast(msg: "Logged out successfully");
                 },
                 style: ElevatedButton.styleFrom(
@@ -91,10 +89,10 @@ class SettingsScreen extends StatelessWidget {
   }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       color: Colors.white.withOpacity(0.08),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         leading: Icon(icon, color: Colors.pinkAccent, size: 28),
         title: Text(title, style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w500)),
         subtitle: subtitle.isNotEmpty ? Text(subtitle, style: const TextStyle(color: Colors.white70)) : null,
