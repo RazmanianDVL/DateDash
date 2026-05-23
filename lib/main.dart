@@ -1,21 +1,16 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firebase_options.dart';
 import 'screens/auth_screen.dart';
 import 'screens/id_verification_screen.dart';
-import 'screens/biometric_gate.dart';
+import 'screens/main_navigation_screen.dart';
+import 'screens/biometric_gate.dart'; // kept for optional use
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: const FirebaseOptions(
-      apiKey: "AIzaSyCIBfFMdvd9cV7CmvZThgTqiJrDM0PTV74",
-      appId: "1:36147853184:android:e9e3daa8ce692729c07365",
-      messagingSenderId: "36147853184",
-      projectId: "this-thing-f97e1",
-      storageBucket: "this-thing-f97e1.firebasestorage.app",
-    ),
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -27,9 +22,11 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'DateDash',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        primaryColor: Colors.pinkAccent,
-        scaffoldBackgroundColor: Colors.black87,
+      theme: ThemeData(
+        primarySwatch: Colors.pink,
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(backgroundColor: Colors.deepPurple),
+        textTheme: const TextTheme(bodyMedium: TextStyle(color: Colors.white)),
       ),
       home: const AuthWrapper(),
     );
@@ -45,12 +42,44 @@ class AuthWrapper extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator(color: Colors.pinkAccent)));
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
-        if (snapshot.hasData) {
-          return const IDVerificationGate();   // Changed: Now goes directly to ID verification (biometric is now optional)
+
+        final user = snapshot.data;
+        if (user == null) {
+          return const AuthScreen(); // your existing login/signup screen
         }
-        return const AuthScreen();
+
+        // User is logged in → check if they have completed ID verification
+        return FutureBuilder<DocumentSnapshot>(
+          future: FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get(),
+          builder: (context, userSnapshot) {
+            if (userSnapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            }
+
+            final userData = userSnapshot.data?.data() as Map<String, dynamic>? ?? {};
+
+            // Biometric is now OPTIONAL (we already added this flag earlier)
+            final bool biometricEnabled = userData['biometricEnabled'] ?? false;
+
+            // If they have NOT completed ID verification yet
+            if (userData['isVerified'] != true) {
+              return const IDVerificationScreen();
+            }
+
+            // Biometric optional check (only show if they turned it on)
+            if (biometricEnabled) {
+              return const BiometricGate(); // your existing biometric screen
+            }
+
+            // Everything is done → go to the new bottom-nav home
+            return const MainNavigationScreen();
+          },
+        );
       },
     );
   }

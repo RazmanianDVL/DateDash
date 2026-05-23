@@ -1,30 +1,76 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 class WebRTCSignalingService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _currentUserId = FirebaseAuth.instance.currentUser!.uid;
+  final String roomId;
+  final String currentUserId;
 
-  // Create a new call/match room
-  Future<String> createCallRoom() async {
-    final roomRef = await _firestore.collection('calls').add({
-      'callerId': _currentUserId,
-      'calleeId': null,
-      'status': 'waiting',
-      'createdAt': FieldValue.serverTimestamp(),
+  WebRTCSignalingService({required this.roomId, required this.currentUserId});
+
+  Future<void> createOffer(RTCPeerConnection pc) async {
+    RTCSessionDescription offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    await FirebaseFirestore.instance
+        .collection('calls')
+        .doc(roomId)
+        .set({'offer': offer.toMap(), 'callerId': currentUserId}, SetOptions(merge: true));
+  }
+
+  Future<void> createAnswer(RTCPeerConnection pc) async {
+    RTCSessionDescription answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    await FirebaseFirestore.instance
+        .collection('calls')
+        .doc(roomId)
+        .update({'answer': answer.toMap()});
+  }
+
+  void listenForRemoteOffer(RTCPeerConnection pc, Function onOfferReceived) {
+    FirebaseFirestore.instance.collection('calls').doc(roomId).snapshots().listen((snapshot) {
+      final data = snapshot.data();
+      if (data != null && data['offer'] != null && data['callerId'] != currentUserId) {
+        onOfferReceived(data['offer']);
+      }
     });
-    return roomRef.id;
   }
 
-  // Listen for incoming calls
-  Stream<DocumentSnapshot> listenForIncomingCalls() {
-    return _firestore.collection('calls')
-        .where('calleeId', isEqualTo: _currentUserId)
-        .where('status', isEqualTo: 'waiting')
+  void listenForRemoteAnswer(RTCPeerConnection pc) {
+    FirebaseFirestore.instance.collection('calls').doc(roomId).snapshots().listen((snapshot) {
+      final data = snapshot.data();
+      if (data != null && data['answer'] != null) {
+        pc.setRemoteDescription(RTCSessionDescription(data['answer']['sdp'], data['answer']['type']));
+      }
+    });
+  }
+
+  void addIceCandidate(RTCIceCandidate candidate) {
+    FirebaseFirestore.instance.collection('calls').doc(roomId).collection('iceCandidates').add({
+      'candidate': candidate.toMap(),
+      'senderId': currentUserId,
+    });
+  }
+
+  void listenForIceCandidates(RTCPeerConnection pc) {
+    FirebaseFirestore.instance
+        .collection('calls')
+        .doc(roomId)
+        .collection('iceCandidates')
         .snapshots()
-        .map((snapshot) => snapshot.docs.first);
+        .listen((snapshot) {
+      for (var doc in snapshot.docChanges) {
+        if (doc.type == DocumentChangeType.added) {
+          final data = doc.doc.data()!;
+          if (data['senderId'] != currentUserId) {
+            pc.addCandidate(RTCIceCandidate(
+              data['candidate']['candidate'],
+              data['candidate']['sdpMid'],
+              data['candidate']['sdpMLineIndex'],
+            ));
+          }
+        }
+      }
+    });
   }
-
-  // TODO: Full signaling logic (offer, answer, ICE candidates) will be expanded in next phase
 }
