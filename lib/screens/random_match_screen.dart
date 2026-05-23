@@ -16,7 +16,7 @@ class RandomMatchScreen extends StatefulWidget {
 
 class _RandomMatchScreenState extends State<RandomMatchScreen> {
   bool _hasPermissions = false;
-  bool _isInitialized = false;          // ← Prevents permission screen flash
+  bool _isInitialized = false;
   bool _isMatching = false;
   bool _isConnected = false;
 
@@ -30,15 +30,17 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
   int _secondsRemaining = 300;
   bool _showSkipButton = false;
 
+  // Dynamic aspect ratio that updates from the real camera feed
+  double _previewAspectRatio = 9 / 16; // safe default for portrait selfie
+
   @override
   void initState() {
     super.initState();
     localRenderer.initialize();
     remoteRenderer.initialize();
-    _checkPermissionsAndInitialize();   // ← Checks first, then loads UI
+    _checkPermissionsAndInitialize();
   }
 
-  /// Checks current permission status FIRST (no flash on load)
   Future<void> _checkPermissionsAndInitialize() async {
     final cameraStatus = await Permission.camera.status;
     final micStatus = await Permission.microphone.status;
@@ -77,6 +79,16 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
       final constraints = {'audio': true, 'video': {'facingMode': 'user'}};
       localStream = await navigator.mediaDevices.getUserMedia(constraints);
       localRenderer.srcObject = localStream;
+
+      // Dynamically update aspect ratio from actual camera dimensions
+      localRenderer.onVideoSizeChanged = (int width, int height) {
+        if (width > 0 && height > 0) {
+          setState(() {
+            _previewAspectRatio = width / height;
+          });
+        }
+      };
+
       setState(() {}); // force preview refresh
     } catch (e) {
       Fluttertoast.showToast(msg: "Could not access camera");
@@ -163,7 +175,6 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
   Widget build(BuildContext context) {
     String timerText = "${(_secondsRemaining ~/ 60).toString().padLeft(2, '0')}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}";
 
-    // Only show permission screen AFTER initialization check
     if (_isInitialized && !_hasPermissions) {
       return Scaffold(
         appBar: AppBar(title: const Text('DateDash — Nearby Match'), backgroundColor: Colors.deepPurple.shade900),
@@ -191,7 +202,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
       );
     }
 
-    // Main DateDash Nearby Match UI (loads immediately with live preview)
+    // Main Nearby Match UI
     return Scaffold(
       appBar: AppBar(title: const Text('DateDash — Nearby Match'), backgroundColor: Colors.deepPurple.shade900),
       body: Container(
@@ -217,24 +228,28 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                   Positioned(
                     bottom: 30,
                     right: 20,
-                    child: Container(
-                      width: 140,
-                      height: 210,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.pinkAccent, width: 6),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.pinkAccent.withOpacity(0.6),
-                            blurRadius: 20,
-                            spreadRadius: 3,
+                    child: SizedBox(
+                      width: 155,
+                      child: AspectRatio(
+                        aspectRatio: _previewAspectRatio,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.pinkAccent, width: 6),
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.pinkAccent.withOpacity(0.6),
+                                blurRadius: 20,
+                                spreadRadius: 3,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      clipBehavior: Clip.hardEdge,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16), // ← PERFECTLY MATCHES border (fixed misalignment)
-                        child: RTCVideoView(localRenderer, mirror: true),
+                          clipBehavior: Clip.hardEdge,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: RTCVideoView(localRenderer, mirror: true),
+                          ),
+                        ),
                       ),
                     ),
                   ),
