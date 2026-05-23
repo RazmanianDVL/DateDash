@@ -3,6 +3,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 import 'home_screen.dart';
 
 class IDVerificationGate extends StatelessWidget {
@@ -16,7 +18,8 @@ class IDVerificationGate extends StatelessWidget {
           .doc(FirebaseAuth.instance.currentUser!.uid)
           .get(),
       builder: (context, snapshot) {
-        if (snapshot.hasData && snapshot.data!.exists && snapshot.data!['isVerified'] == true) {
+        if (snapshot.hasData && snapshot.data!.exists && 
+            (snapshot.data!['verificationStatus'] == 'approved' || snapshot.data!['isVerified'] == true)) {
           return const HomeScreen();
         }
         return const IDVerificationScreen();
@@ -41,27 +44,52 @@ class _IDVerificationScreenState extends State<IDVerificationScreen> {
 
     try {
       final idPhoto = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
-      if (idPhoto == null) throw Exception('ID photo required');
+      if (idPhoto == null) throw Exception('ID photo is required');
 
       final selfie = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
-      if (selfie == null) throw Exception('Selfie required');
+      if (selfie == null) throw Exception('Selfie is required');
 
+      final user = FirebaseAuth.instance.currentUser!;
+      final uid = user.uid;
+
+      // Upload ID photo
+      final idRef = FirebaseStorage.instance
+          .ref('users/$uid/id_photo_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await idRef.putFile(File(idPhoto.path));
+      final idUrl = await idRef.getDownloadURL();
+
+      // Upload Selfie
+      final selfieRef = FirebaseStorage.instance
+          .ref('users/$uid/selfie_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await selfieRef.putFile(File(selfie.path));
+      final selfieUrl = await selfieRef.getDownloadURL();
+
+      // Update user document with pending status
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(FirebaseAuth.instance.currentUser!.uid)
+          .doc(uid)
           .set({
-        'isVerified': true,
-        'verifiedAt': FieldValue.serverTimestamp(),
+        'idPhotoUrl': idUrl,
+        'selfieUrl': selfieUrl,
+        'verificationStatus': 'pending',
+        'verifiedAt': null,
+        'isVerified': false,  // Keep for backward compatibility
       }, SetOptions(merge: true));
 
-      Fluttertoast.showToast(msg: "ID Verified Successfully! 🎉");
+      Fluttertoast.showToast(msg: "ID & Selfie uploaded! Verification pending approval.", 
+        backgroundColor: Colors.orange);
+
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Your verification is under review. You will be notified soon.')),
+        );
+        // Optionally navigate back or to waiting screen
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: e.toString());
+      Fluttertoast.showToast(msg: 'Error: ${e.toString()}', backgroundColor: Colors.red);
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -97,7 +125,7 @@ class _IDVerificationScreenState extends State<IDVerificationScreen> {
                 const SizedBox(height: 16),
 
                 const Text(
-                  'Take a clear photo of your government ID\nthen record a live selfie',
+                  'Take a clear photo of your government ID\nand a live selfie for face match',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 18, color: Colors.white70, height: 1.5),
                 ),
