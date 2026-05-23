@@ -16,6 +16,7 @@ class RandomMatchScreen extends StatefulWidget {
 
 class _RandomMatchScreenState extends State<RandomMatchScreen> {
   bool _hasPermissions = false;
+  bool _isInitialized = false;          // ← Prevents permission screen flash
   bool _isMatching = false;
   bool _isConnected = false;
 
@@ -34,10 +35,28 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
     super.initState();
     localRenderer.initialize();
     remoteRenderer.initialize();
-    _initialize();
+    _checkPermissionsAndInitialize();   // ← Checks first, then loads UI
   }
 
-  Future<void> _initialize() async {
+  /// Checks current permission status FIRST (no flash on load)
+  Future<void> _checkPermissionsAndInitialize() async {
+    final cameraStatus = await Permission.camera.status;
+    final micStatus = await Permission.microphone.status;
+    final locStatus = await Permission.locationWhenInUse.status;
+
+    final hasAll = cameraStatus.isGranted && micStatus.isGranted && locStatus.isGranted;
+
+    setState(() {
+      _hasPermissions = hasAll;
+      _isInitialized = true;
+    });
+
+    if (hasAll) {
+      await _startLivePreview();
+    }
+  }
+
+  Future<void> _requestPermissions() async {
     final camera = await Permission.camera.request();
     final mic = await Permission.microphone.request();
     final loc = await Permission.locationWhenInUse.request();
@@ -48,6 +67,8 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
 
     if (hasAll) {
       await _startLivePreview();
+    } else {
+      Fluttertoast.showToast(msg: "Permissions are required for matching");
     }
   }
 
@@ -56,7 +77,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
       final constraints = {'audio': true, 'video': {'facingMode': 'user'}};
       localStream = await navigator.mediaDevices.getUserMedia(constraints);
       localRenderer.srcObject = localStream;
-      setState(() {}); // force immediate preview
+      setState(() {}); // force preview refresh
     } catch (e) {
       Fluttertoast.showToast(msg: "Could not access camera");
     }
@@ -142,7 +163,8 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
   Widget build(BuildContext context) {
     String timerText = "${(_secondsRemaining ~/ 60).toString().padLeft(2, '0')}:${(_secondsRemaining % 60).toString().padLeft(2, '0')}";
 
-    if (!_hasPermissions) {
+    // Only show permission screen AFTER initialization check
+    if (_isInitialized && !_hasPermissions) {
       return Scaffold(
         appBar: AppBar(title: const Text('DateDash — Nearby Match'), backgroundColor: Colors.deepPurple.shade900),
         body: Center(
@@ -151,17 +173,25 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
             children: [
               const Icon(Icons.camera_alt, size: 80, color: Colors.white70),
               const SizedBox(height: 20),
-              const Text("Camera and location permissions required", textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: Colors.white)),
+              const Text("Camera, microphone & location permissions required",
+                  textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: Colors.white)),
               const SizedBox(height: 30),
-              ElevatedButton(onPressed: _initialize, child: const Text("Request Permissions")),
+              ElevatedButton(onPressed: _requestPermissions, child: const Text("Grant Permissions")),
               const SizedBox(height: 10),
-              TextButton(onPressed: () async { await openAppSettings(); _initialize(); }, child: const Text("Open Settings")),
+              TextButton(
+                onPressed: () async {
+                  await openAppSettings();
+                  _checkPermissionsAndInitialize();
+                },
+                child: const Text("Open Settings"),
+              ),
             ],
           ),
         ),
       );
     }
 
+    // Main DateDash Nearby Match UI (loads immediately with live preview)
     return Scaffold(
       appBar: AppBar(title: const Text('DateDash — Nearby Match'), backgroundColor: Colors.deepPurple.shade900),
       body: Container(
@@ -185,17 +215,25 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                 children: [
                   RTCVideoView(remoteRenderer, mirror: false),
                   Positioned(
-                    bottom: 20,
+                    bottom: 30,
                     right: 20,
                     child: Container(
-                      width: 130,
-                      height: 200,
+                      width: 140,
+                      height: 210,
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.pinkAccent, width: 3),
-                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.pinkAccent, width: 6),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.pinkAccent.withOpacity(0.6),
+                            blurRadius: 20,
+                            spreadRadius: 3,
+                          ),
+                        ],
                       ),
+                      clipBehavior: Clip.hardEdge,
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12), // ← FIXED: now matches Container exactly for perfect alignment
+                        borderRadius: BorderRadius.circular(16), // ← PERFECTLY MATCHES border (fixed misalignment)
                         child: RTCVideoView(localRenderer, mirror: true),
                       ),
                     ),
