@@ -195,7 +195,7 @@ class _RandomMatchScreenState extends State<RandomMatchScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(9), // slightly smaller to fit inside border
+                        borderRadius: BorderRadius.circular(12), // ← FIXED: now matches Container exactly for perfect alignment
                         child: RTCVideoView(localRenderer, mirror: true),
                       ),
                     ),
