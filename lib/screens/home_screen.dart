@@ -72,14 +72,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Nearby Users'), backgroundColor: Colors.deepPurple.shade900),
+        appBar: null,
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (!_hasLocationPermission) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Nearby Users'), backgroundColor: Colors.deepPurple.shade900),
+        appBar: null,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -98,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nearby Users'), backgroundColor: Colors.deepPurple.shade900),
+      appBar: null,
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('users').where('isVerified', isEqualTo: true).where('isOnline', isEqualTo: true).snapshots(),
         builder: (context, snapshot) {
